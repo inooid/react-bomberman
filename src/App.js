@@ -1,20 +1,20 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
 
 import BreakableWall from './components/BreakableWall';
 import Wall from './components/Wall';
 import Walkable from './components/Walkable';
+import Player from './components/Player';
 
 const WALL = { type: 'WALL' };
 const BWAL = { type: 'BREAKABLE_WALL' };
+const USER = { type: 'PLAYER' };
 
 class App extends Component {
   state = {
     // prettier-ignore
     playingField: [
       [WALL, WALL, WALL, WALL, WALL, WALL, WALL],
-      [WALL, null, null, BWAL, null, null, WALL],
+      [WALL, USER, null, BWAL, null, null, WALL],
       [WALL, null, WALL, null, WALL, null, WALL],
       [WALL, BWAL, null, null, null, null, WALL],
       [WALL, null, WALL, null, WALL, null, WALL],
@@ -25,7 +25,7 @@ class App extends Component {
 
   render() {
     return (
-      <div>
+      <div style={{ backgroundColor: 'lightgray' }}>
         {this.state.playingField.map(rows => (
           <div style={{ display: 'flex' }}>
             {rows.map(el => {
@@ -36,6 +36,8 @@ class App extends Component {
                   return <Wall />;
                 case 'BREAKABLE_WALL':
                   return <BreakableWall />;
+                case 'PLAYER':
+                  return <Player />;
                 default:
                   return <Walkable />;
               }
