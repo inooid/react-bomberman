@@ -4,10 +4,10 @@ import BreakableWall from './components/BreakableWall';
 import Wall from './components/Wall';
 import Walkable from './components/Walkable';
 import Player from './components/Player';
+import Bomb from './components/Bomb';
 
 const WALL = { type: 'WALL' };
 const BWAL = { type: 'BREAKABLE_WALL' };
-const USER = { type: 'PLAYER' };
 
 class App extends Component {
   state = {
@@ -22,8 +22,17 @@ class App extends Component {
       [WALL, WALL, WALL, WALL, WALL, WALL, WALL],
     ],
 
+    bombsByPlayer: {
+      you: [],
+    },
+
     players: {
-      you: { x: 1, y: 1 },
+      you: {
+        maxBombs: 1,
+        strength: 1,
+        x: 1,
+        y: 1,
+      },
     },
   };
 
@@ -51,9 +60,32 @@ class App extends Component {
         return this.movePlayer('x', 1);
       case 'Space':
         console.log('💣');
+        return this.placeBomb();
       default:
         return;
     }
+  };
+
+  placeBomb = (target = 'you') => {
+    const player = this.state.players[target];
+    const { strength, x, y } = player;
+    const coordinates = { x, y };
+
+    if (!this.canPlaceBomb(target)) return;
+
+    this.setState(prevState => ({
+      bombsByPlayer: {
+        ...prevState.bombsByPlayer,
+        [target]: [...prevState.bombsByPlayer[target], { ...coordinates, strength }],
+      },
+    }));
+  };
+
+  canPlaceBomb = target => {
+    const player = this.state.players[target];
+    const placedBombCount = this.state.bombsByPlayer[target].length;
+
+    return placedBombCount < player.maxBombs;
   };
 
   movePlayer = (axis, amount, target = 'you') => {
@@ -72,39 +104,53 @@ class App extends Component {
 
   canMove = coordinates => {
     const playingFieldSpot = this.state.playingField[coordinates.y][coordinates.x];
+    const isBomb = this.isBombOnPosition(coordinates);
 
-    if (playingFieldSpot === null) {
-      return true;
-    }
-
-    return false;
+    return playingFieldSpot === null && !isBomb;
   };
 
-  render() {
-    const playersData = Object.entries(this.state.players);
+  isBombOnPosition = ({ x, y }) =>
+    Object.entries(this.state.bombsByPlayer).some(([_, bombs]) =>
+      bombs.some(bombCoordinates => bombCoordinates.x === x && bombCoordinates.y === y)
+    );
 
+  isPlayerOnPosition = ({ x, y }) =>
+    Object.entries(this.state.players).some(
+      ([_, coordinates]) => coordinates.x === x && coordinates.y === y
+    );
+
+  render() {
     return (
       <div style={{ backgroundColor: 'lightgray' }}>
         {this.state.playingField.map((rows, y) => (
           <div key={`row-${y}`} style={{ display: 'flex' }}>
             {rows.map((el, x) => {
-              const isPlayerOnTile = playersData.some(
-                ([_, coordinates]) => coordinates.x === x && coordinates.y === y
-              );
+              const keyData = `${x}-${y}`;
+              const isBombOnPosition = this.isBombOnPosition({ x, y });
+              const isPlayerOnPosition = this.isPlayerOnPosition({ x, y });
 
-              if (isPlayerOnTile) {
-                return <Player key={`player-${x}-${y}`} />;
-              }
-
-              if (!el) return <Walkable key={`walkable-${x}-${y}`} />;
+              if (isPlayerOnPosition && isBombOnPosition)
+                return (
+                  <div
+                    className="TwoTilesInOne"
+                    style={{ width: 50, height: 50 }}
+                    key={`bomb-player-${keyData}`}
+                  >
+                    <Player />
+                    <Bomb />
+                  </div>
+                );
+              if (isBombOnPosition) return <Bomb key={`bomb-${keyData}`} />;
+              if (isPlayerOnPosition) return <Player key={`player-${keyData}`} />;
+              if (!el) return <Walkable key={`walkable-${keyData}`} />;
 
               switch (el.type) {
                 case 'WALL':
-                  return <Wall key={`wall-${x}-${y}`} />;
+                  return <Wall key={`wall-${keyData}`} />;
                 case 'BREAKABLE_WALL':
-                  return <BreakableWall key={`breakable-wall-${x}-${y}`} />;
+                  return <BreakableWall key={`breakable-wall-${keyData}`} />;
                 default:
-                  return <Walkable key={`walkable-${x}-${y}`} />;
+                  return <Walkable key={`walkable-${keyData}`} />;
               }
             })}
           </div>
